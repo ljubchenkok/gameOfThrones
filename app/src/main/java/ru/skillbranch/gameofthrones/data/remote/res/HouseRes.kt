@@ -1,6 +1,7 @@
 package ru.skillbranch.gameofthrones.data.remote.res
 
 import com.squareup.moshi.JsonClass
+import ru.skillbranch.gameofthrones.data.local.entities.House
 
 @JsonClass(generateAdapter = true)
 data class HouseRes(
@@ -20,4 +21,24 @@ data class HouseRes(
     val ancestralWeapons: List<String> = listOf(),
     val cadetBranches: List<Any> = listOf(),
     val swornMembers: List<String> = listOf()
-)
+){
+    fun toHouse(id: String): House{
+        return House(
+            id = id,
+            name = this.name,
+            region = this.region,
+            coatOfArms = this.coatOfArms,
+            words = this.words,
+            titles = this.titles,
+            seats = this.seats,
+            currentLord = this.currentLord,
+            heir = this.heir,
+            overlord = this.overlord,
+            founded = this.founded,
+            founder = this.founder,
+            diedOut = this.diedOut,
+            ancestralWeapons = this.ancestralWeapons
+        )
+
+    }
+}

@@ -44,5 +44,8 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-viewmodel:2.2.0-rc03'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.2.1'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.0.1'
+    implementation "android.arch.persistence.room:runtime:1.1.1"
+    kapt "android.arch.persistence.room:compiler:1.1.1"
+    implementation 'com.google.code.gson:gson:2.8.6'
 
 }

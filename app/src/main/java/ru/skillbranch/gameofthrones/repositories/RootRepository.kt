@@ -5,6 +5,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import ru.skillbranch.gameofthrones.App.Companion.applicationContext
 import ru.skillbranch.gameofthrones.data.local.entities.CharacterFull
 import ru.skillbranch.gameofthrones.data.local.entities.CharacterItem
 import ru.skillbranch.gameofthrones.data.remote.res.CharacterRes
@@ -19,6 +20,7 @@ object RootRepository {
     private val coroutineContext: CoroutineContext
         get() = parentJob + Dispatchers.Default
     private val scope = CoroutineScope(coroutineContext)
+    private val dbHelper = DBHelper(applicationContext())
     /**
      * Получение данных о всех домах из сети
      * @param result - колбек содержащий в себе список данных о домах
@@ -85,7 +87,7 @@ object RootRepository {
                     val characters = ArrayList<CharacterRes>()
                     for (characterURL in house.swornMembers) {
                         val characterResponse =
-                            api.getCharacter(characterURL.split("/").last()).await()
+                            api.getCharacter(characterURL).await()
                         if (characterResponse.isSuccessful) {
                             val data = characterResponse.body()
                             if (data != null) {
@@ -110,7 +112,9 @@ object RootRepository {
      */
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
     fun insertHouses(houses: List<HouseRes>, complete: () -> Unit) {
-        //TODO implement me
+        val h = houses.mapIndexed { index, houseRes -> houseRes.toHouse(index.toString()) }
+        dbHelper.insertHouses(h, complete)
+
     }
 
     /**

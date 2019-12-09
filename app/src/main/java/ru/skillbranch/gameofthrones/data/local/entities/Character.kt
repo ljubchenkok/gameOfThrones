@@ -24,14 +24,6 @@ data class Character(
     val houseId: String//rel
 )
 
-@Entity(tableName = "character_to_houses")
-data class CharacterToHouse(
-    @PrimaryKey
-    val id: String,
-    val characterId: String,
-    val houseId: String
-)
-
 
 data class CharacterItem(
     val id: String,

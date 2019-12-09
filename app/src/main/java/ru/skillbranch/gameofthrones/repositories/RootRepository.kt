@@ -1,10 +1,8 @@
 package ru.skillbranch.gameofthrones.repositories
 
 import androidx.annotation.VisibleForTesting
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
+import androidx.room.Room
+import kotlinx.coroutines.*
 import ru.skillbranch.gameofthrones.App.Companion.applicationContext
 import ru.skillbranch.gameofthrones.data.local.entities.CharacterFull
 import ru.skillbranch.gameofthrones.data.local.entities.CharacterItem
@@ -14,13 +12,24 @@ import kotlin.coroutines.CoroutineContext
 
 object RootRepository {
 
+    private const val DB_NAME = "gameOfThrones"
     private var apiFactory = ApiFactory()
     private var api = apiFactory.gameOfThronesApi
     private val parentJob = Job()
     private val coroutineContext: CoroutineContext
         get() = parentJob + Dispatchers.Default
     private val scope = CoroutineScope(coroutineContext)
-    private val dbHelper = DBHelper(applicationContext())
+    private val db: AppDatabase = Room.databaseBuilder(
+        applicationContext(),
+        AppDatabase::class.java,
+        DB_NAME
+    )
+        .fallbackToDestructiveMigration()
+        .build()
+
+
+
+
     /**
      * Получение данных о всех домах из сети
      * @param result - колбек содержащий в себе список данных о домах
@@ -112,8 +121,11 @@ object RootRepository {
      */
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
     fun insertHouses(houses: List<HouseRes>, complete: () -> Unit) {
-        val h = houses.mapIndexed { index, houseRes -> houseRes.toHouse(index.toString()) }
-        dbHelper.insertHouses(h, complete)
+        val h = houses.map { houseRes -> houseRes.toHouse(houseRes.url.split("/").last()) }
+        GlobalScope.launch {
+            db.gameOfThronesDAO().insertHouses(h)
+            complete.invoke()
+        }
 
     }
 
@@ -124,8 +136,16 @@ object RootRepository {
      * @param complete - колбек о завершении вставки записей db
      */
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-    fun insertCharacters(Characters: List<CharacterRes>, complete: () -> Unit) {
-        //TODO implement me
+    fun insertCharacters(characters: List<CharacterRes>, complete: () -> Unit) {
+        GlobalScope.launch {
+            val c = characters.map { characterRes -> characterRes.toCharacter(
+                characterRes.url.split("/").last(),
+                characterRes.allegiances.first().split("/").last()
+            )}
+            db.gameOfThronesDAO().insertCharacters(c)
+            complete.invoke()
+        }
+
     }
 
     /**
@@ -134,7 +154,11 @@ object RootRepository {
      */
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
     fun dropDb(complete: () -> Unit) {
-        //TODO implement me
+        GlobalScope.launch {
+            db.gameOfThronesDAO().deleteAllCharacters()
+            db.gameOfThronesDAO().deleteAllHouses()
+
+        }
     }
 
     /**
@@ -164,7 +188,12 @@ object RootRepository {
      * @param result - колбек о завершении очистки db
      */
     fun isNeedUpdate(result: (isNeed: Boolean) -> Unit) {
-        //TODO implement me
+        GlobalScope.launch {
+            with(db.gameOfThronesDAO()){
+                val isNeeded = getCountOfHouses() == 0 && getCountOfCharacters() == 0
+                result.invoke(isNeeded)
+            }
+        }
     }
 
 }

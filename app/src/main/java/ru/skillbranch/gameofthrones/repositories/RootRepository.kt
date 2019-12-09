@@ -11,7 +11,7 @@ import ru.skillbranch.gameofthrones.data.remote.res.CharacterRes
 import ru.skillbranch.gameofthrones.data.remote.res.HouseRes
 import kotlin.coroutines.CoroutineContext
 
-object RootRepository  {
+object RootRepository {
 
     private var apiFactory = ApiFactory()
     private var api = apiFactory.gameOfThronesApi
@@ -24,22 +24,48 @@ object RootRepository  {
      * @param result - колбек содержащий в себе список данных о домах
      */
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-    fun getAllHouses(result : (houses : List<HouseRes>) -> Unit) {
+    fun getAllHouses(result: (houses: List<HouseRes>) -> Unit) {
         scope.launch {
-            val housesResponse = api.getHouses().await()
-            if(housesResponse.isSuccessful && housesResponse.body()!= null)
-                result.invoke(housesResponse.body()!!)
+            var count = 1
+            val houses = ArrayList<HouseRes>()
+            while (count < 45) {
+                val housesResponse = api.getAllHouses(count, 50).await()
+                if (housesResponse.isSuccessful) {
+                    val data = housesResponse.body()
+                    if (data.isNullOrEmpty()) {
+                        break
+                    } else {
+                        houses.addAll(data)
+                    }
+
+                }
+                count++
+            }
+            result.invoke(houses)
         }
     }
 
     /**
-     * Получение данных о требуемых домах по их полным именам из сети 
+     * Получение данных о требуемых домах по их полным именам из сети
      * @param houseNames - массив полных названий домов (смотри AppConfig)
      * @param result - колбек содержащий в себе список данных о домах
      */
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-    fun getNeedHouses(vararg houseNames: String, result : (houses : List<HouseRes>) -> Unit) {
-        //TODO implement me
+    fun getNeedHouses(vararg houseNames: String, result: (houses: List<HouseRes>) -> Unit) {
+        val houses = ArrayList<HouseRes>()
+        scope.launch {
+            houseNames.forEach {
+                val houseResponse = api.getHouse(it).await()
+                if (houseResponse.isSuccessful) {
+                    val data = houseResponse.body()
+                    if (!data.isNullOrEmpty()) {
+                        houses.addAll(data)
+                    }
+                }
+            }
+            result.invoke(houses)
+        }
+
     }
 
     /**
@@ -48,8 +74,32 @@ object RootRepository  {
      * @param result - колбек содержащий в себе список данных о доме и персонажей в нем (Дом - Список Персонажей в нем)
      */
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-    fun getNeedHouseWithCharacters(vararg houseNames: String, result : (houses : List<Pair<HouseRes, List<CharacterRes>>>) -> Unit) {
-        //TODO implement me
+    fun getNeedHouseWithCharacters(
+        vararg houseNames: String,
+        result: (houses: List<Pair<HouseRes, List<CharacterRes>>>) -> Unit
+    ) {
+        val housesWithCharacter = ArrayList<Pair<HouseRes, List<CharacterRes>>>()
+        getNeedHouses(*houseNames) {
+            scope.launch {
+                for (house in it) {
+                    val characters = ArrayList<CharacterRes>()
+                    for (characterURL in house.swornMembers) {
+                        val characterResponse =
+                            api.getCharacter(characterURL.split("/").last()).await()
+                        if (characterResponse.isSuccessful) {
+                            val data = characterResponse.body()
+                            if (data != null) {
+                                characters.add(data)
+                            }
+                        }
+
+                    }
+                    housesWithCharacter.add(Pair(house, characters))
+                }
+                result.invoke(housesWithCharacter)
+            }
+
+        }
     }
 
     /**
@@ -59,7 +109,7 @@ object RootRepository  {
      * @param complete - колбек о завершении вставки записей db
      */
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-    fun insertHouses(houses : List<HouseRes>, complete: () -> Unit) {
+    fun insertHouses(houses: List<HouseRes>, complete: () -> Unit) {
         //TODO implement me
     }
 
@@ -70,7 +120,7 @@ object RootRepository  {
      * @param complete - колбек о завершении вставки записей db
      */
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-    fun insertCharacters(Characters : List<CharacterRes>, complete: () -> Unit) {
+    fun insertCharacters(Characters: List<CharacterRes>, complete: () -> Unit) {
         //TODO implement me
     }
 
@@ -90,7 +140,7 @@ object RootRepository  {
      * @param result - колбек содержащий в себе список краткой информации о персонажах дома
      */
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-    fun findCharactersByHouseName(name : String, result: (characters : List<CharacterItem>) -> Unit) {
+    fun findCharactersByHouseName(name: String, result: (characters: List<CharacterItem>) -> Unit) {
         //TODO implement me
     }
 
@@ -101,7 +151,7 @@ object RootRepository  {
      * @param result - колбек содержащий в себе полную информацию о персонаже
      */
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-    fun findCharacterFullById(id : String, result: (character : CharacterFull) -> Unit) {
+    fun findCharacterFullById(id: String, result: (character: CharacterFull) -> Unit) {
         //TODO implement me
     }
 
@@ -109,7 +159,7 @@ object RootRepository  {
      * Метод возвращет true если в базе нет ни одной записи, иначе false
      * @param result - колбек о завершении очистки db
      */
-    fun isNeedUpdate(result: (isNeed : Boolean) -> Unit){
+    fun isNeedUpdate(result: (isNeed: Boolean) -> Unit) {
         //TODO implement me
     }
 

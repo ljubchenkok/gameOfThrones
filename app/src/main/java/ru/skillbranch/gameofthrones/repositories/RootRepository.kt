@@ -137,6 +137,7 @@ object RootRepository {
     fun insertHouses(housesRes: List<HouseRes>, complete: () -> Unit) {
         val houses = housesRes.map { houseRes -> houseRes.toHouse(
             id = houseRes.url.split("/").last(),
+            shortName = houseRes.name.split(" ")[1],
             currentLordId = houseRes.currentLord.split("/").last(),
             founderId = houseRes.founder.split("/").last(),
             heirId = houseRes.heir.split("/").last()

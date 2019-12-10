@@ -26,12 +26,12 @@ class MainActivity : AppCompatActivity() {
         setTheme(R.style.SplashTheme)
         setContentView(R.layout.activity_main)
         startAnimateImageView()
-//        RootRepository.dropDb {
-//            Log.d("DB", "Droped!!")
-//            getData()
-//
-//        }
-        getData()
+        RootRepository.dropDb {
+            Log.d("DB", "Droped!!")
+            getData()
+
+        }
+//        getData()
         checkDataIsReady()
         return
 

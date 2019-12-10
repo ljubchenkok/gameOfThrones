@@ -8,8 +8,8 @@ import ru.skillbranch.gameofthrones.repositories.Converters
 
 @Entity(tableName = "houses")
 data class House(
-    @PrimaryKey
     val id: String,
+    @PrimaryKey
     val name: String,
     val region: String,
     @ColumnInfo(name = "coat_of_arms")

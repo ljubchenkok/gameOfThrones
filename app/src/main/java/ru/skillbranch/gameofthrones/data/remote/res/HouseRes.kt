@@ -22,13 +22,13 @@ data class HouseRes(
     val cadetBranches: List<Any> = listOf(),
     val swornMembers: List<String> = listOf()
 ){
-    fun toHouse(id: String, currentLordId: String, heirId:String, founderId:String): House{
+    fun toHouse(id: String, shortName: String, currentLordId: String, heirId:String, founderId:String): House{
         return House(
             id = id,
             currentLord = currentLordId,
             heir = heirId,
             founder = founderId,
-            name = this.name,
+            name = shortName,
             region = this.region,
             coatOfArms = this.coatOfArms,
             words = this.words,

@@ -23,19 +23,19 @@ data class CharacterRes(
     val playedBy: List<String> = listOf()
 
 ){
-    fun toCharacter(id: String, houseId: String): Character{
+    fun toCharacter(id: String, houseId: String, motherId: String, fatherId: String, spouseId: String): Character{
         return Character(
             id = id,
+            houseId = houseId,
+            mother = motherId,
+            father = fatherId,
+            spouse = spouseId,
             aliases = this.aliases,
             born = this.born,
             culture = this.culture,
             died = this.died,
-            father = this.father,
             gender = this.gender,
-            houseId = houseId,
-            mother = this.mother,
             name = this.name,
-            spouse = this.spouse,
             titles = this.titles
 
         )

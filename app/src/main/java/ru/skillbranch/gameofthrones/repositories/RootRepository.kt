@@ -1,6 +1,5 @@
 package ru.skillbranch.gameofthrones.repositories
 
-import android.util.Log
 import androidx.annotation.VisibleForTesting
 import androidx.room.Room
 import kotlinx.coroutines.*
@@ -130,15 +129,20 @@ object RootRepository {
 
     /**
      * Запись данных о домах в DB
-     * @param houses - Список персонажей (модель HouseRes - модель ответа из сети)
+     * @param housesRes - Список персонажей (модель HouseRes - модель ответа из сети)
      * необходимо произвести трансформацию данных
      * @param complete - колбек о завершении вставки записей db
      */
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-    fun insertHouses(houses: List<HouseRes>, complete: () -> Unit) {
-        val h = houses.map { houseRes -> houseRes.toHouse(houseRes.url.split("/").last()) }
+    fun insertHouses(housesRes: List<HouseRes>, complete: () -> Unit) {
+        val houses = housesRes.map { houseRes -> houseRes.toHouse(
+            id = houseRes.url.split("/").last(),
+            currentLordId = houseRes.currentLord.split("/").last(),
+            founderId = houseRes.founder.split("/").last(),
+            heirId = houseRes.heir.split("/").last()
+        )}
         GlobalScope.launch {
-            db.gameOfThronesDAO().insertHouses(h)
+            db.gameOfThronesDAO().insertHouses(houses)
             complete.invoke()
         }
 
@@ -151,15 +155,19 @@ object RootRepository {
      * @param complete - колбек о завершении вставки записей db
      */
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-    fun insertCharacters(characters: List<CharacterRes>, complete: () -> Unit) {
+    fun insertCharacters(charactersRes: List<CharacterRes>, complete: () -> Unit) {
         GlobalScope.launch {
-            val c = characters.map { characterRes ->
+            val characters = charactersRes.map { characterRes ->
                 characterRes.toCharacter(
-                    characterRes.url.split("/").last(),
-                    characterRes.allegiances.first().split("/").last()
+                    id = characterRes.url.split("/").last(),
+                    houseId = characterRes.allegiances.first().split("/").last(),
+                    motherId = characterRes.mother.split("/").last(),
+                    fatherId = characterRes.father.split("/").last(),
+                    spouseId = characterRes.spouse.split("/").last()
+
                 )
             }
-            db.gameOfThronesDAO().insertCharacters(c)
+            db.gameOfThronesDAO().insertCharacters(characters)
             complete.invoke()
         }
 

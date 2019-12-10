@@ -8,6 +8,7 @@ import android.graphics.PorterDuff
 import android.net.ConnectivityManager
 import android.os.Bundle
 import android.os.Handler
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.activity_main.*
@@ -25,6 +26,11 @@ class MainActivity : AppCompatActivity() {
         setTheme(R.style.SplashTheme)
         setContentView(R.layout.activity_main)
         startAnimateImageView()
+//        RootRepository.dropDb {
+//            Log.d("DB", "Droped!!")
+//            getData()
+//
+//        }
         getData()
         checkDataIsReady()
         return

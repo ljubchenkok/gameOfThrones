@@ -15,6 +15,9 @@ interface GameOfThronesDAO {
     @Query("SELECT * FROM HOUSES")
     fun getAllHouses():Array<House>
 
+    @Query("SELECT * FROM HOUSES WHERE name = :name")
+    fun getHouse(name: String):House
+
     @Query("SELECT count(id) FROM HOUSES")
     fun getCountOfHouses():Int
 

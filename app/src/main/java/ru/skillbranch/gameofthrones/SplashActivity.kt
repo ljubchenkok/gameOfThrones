@@ -13,9 +13,10 @@ import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.activity_main.*
 import ru.skillbranch.gameofthrones.repositories.RootRepository
+import ru.skillbranch.gameofthrones.ui.CharactersListScreen
 
 
-class MainActivity : AppCompatActivity() {
+class SplashActivity : AppCompatActivity() {
 
 
     private var isHousesReady = false
@@ -26,12 +27,12 @@ class MainActivity : AppCompatActivity() {
         setTheme(R.style.SplashTheme)
         setContentView(R.layout.activity_main)
         startAnimateImageView()
-        RootRepository.dropDb {
-            Log.d("DB", "Droped!!")
-            getData()
-
-        }
-//        getData()
+//        RootRepository.dropDb {
+//            Log.d("DB", "Droped!!")
+//            getData()
+//
+//        }
+        getData()
         checkDataIsReady()
         return
 
@@ -50,7 +51,7 @@ class MainActivity : AppCompatActivity() {
             if(isHousesReady && isCharactersReady) showCharactersListScreen()
             else checkDataIsReady()
         }
-        Handler().postDelayed(r, 5000)
+        Handler().postDelayed(r, 100)
 
 
     }

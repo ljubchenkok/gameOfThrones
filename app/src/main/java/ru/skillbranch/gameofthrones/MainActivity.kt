@@ -1,48 +1,76 @@
 package ru.skillbranch.gameofthrones
 
+import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.PorterDuff
 import android.net.ConnectivityManager
 import android.os.Bundle
+import android.os.Handler
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.activity_main.*
-import ru.skillbranch.gameofthrones.data.remote.res.CharacterRes
-import ru.skillbranch.gameofthrones.data.remote.res.HouseRes
 import ru.skillbranch.gameofthrones.repositories.RootRepository
 
 
 class MainActivity : AppCompatActivity() {
 
-    var progressFlag = true
-    private lateinit var houses: List<Pair<HouseRes, List<CharacterRes>>>
+
+    private var isHousesReady = false
+    private var isCharactersReady = false
+    private val colorAnim = ObjectAnimator.ofFloat(0f, 0.7f)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setTheme(R.style.SplashTheme)
         setContentView(R.layout.activity_main)
-        if(!isOnline()) {
-            Snackbar.make(ll_splash, R.string.no_internet, Snackbar.LENGTH_INDEFINITE)
-                .show();
-            return
+        startAnimateImageView()
+        getData()
+        checkDataIsReady()
+        return
+
+
+    }
+
+    private fun stopAnimateImageView() {
+        runOnUiThread {
+            colorAnim.cancel()
         }
-        showProgress()
+
+    }
+
+    private fun checkDataIsReady() {
+        val r = Runnable {
+            if(isHousesReady && isCharactersReady) showCharactersListScreen()
+            else checkDataIsReady()
+        }
+        Handler().postDelayed(r, 5000)
+
+
+    }
+
+    private fun getData() {
         RootRepository.isNeedUpdate { isNeeded ->
             if (isNeeded) {
-                RootRepository.getNeedHouseWithCharacters(*AppConfig.NEED_HOUSES) {
-                    RootRepository.insertHouses(it.map { pair -> pair.first }) { showProgress() }
+                if (!isOnline()) {
+                    stopAnimateImageView()
+                    Snackbar.make(ll_splash, R.string.no_internet, Snackbar.LENGTH_INDEFINITE)
+                        .show();
+                    return@isNeedUpdate
+                }
+                RootRepository.getNeedHouseWithCharacters(*AppConfig.NEED_HOUSES
+                ) {
+                    RootRepository.insertHouses(it.map { pair -> pair.first }) { isHousesReady = true }
                     for (pair in it) {
-                        RootRepository.insertCharacters(pair.second) { showProgress() }
+                        RootRepository.insertCharacters(pair.second) { isCharactersReady = true }
                     }
-                    showCharactersListScreen()
-
                 }
 
             } else {
-                showCharactersListScreen()
+                isHousesReady = true
+                isCharactersReady = true
             }
         }
-
     }
 
     private fun showCharactersListScreen() {
@@ -51,20 +79,35 @@ class MainActivity : AppCompatActivity() {
         finish()
     }
 
-    fun showProgress() {
-        if (progressFlag) {
-            iv_splash.drawable.setColorFilter(Color.RED, PorterDuff.Mode.MULTIPLY)
-        } else {
-            iv_splash.drawable.clearColorFilter()
-        }
-        progressFlag = !progressFlag
-
-    }
 
     fun isOnline(): Boolean {
         val cm = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
         val netInfo = cm.activeNetworkInfo
         return netInfo != null && netInfo.isConnected
+    }
+
+    fun startAnimateImageView() {
+        val red =  Color.RED
+        colorAnim.addUpdateListener { animation ->
+            val mul = animation.animatedValue as Float
+            val alphaRed = adjustAlpha(red, mul)
+            iv_splash.setColorFilter(alphaRed, PorterDuff.Mode.OVERLAY)
+            if (mul.toDouble() == 0.0) {
+                iv_splash.setColorFilter(null)
+            }
+        }
+        colorAnim.duration = 1000
+        colorAnim.repeatMode = ValueAnimator.REVERSE
+        colorAnim.repeatCount = -1
+        colorAnim.start()
+    }
+
+    fun adjustAlpha(color: Int, factor: Float): Int {
+        val alpha = Math.round(Color.alpha(color) * factor)
+        val red = Color.red(color)
+        val green = Color.green(color)
+        val blue = Color.blue(color)
+        return Color.argb(alpha, red, green, blue)
     }
 
 }

@@ -1,5 +1,6 @@
 package ru.skillbranch.gameofthrones.repositories
 
+import android.util.Log
 import androidx.annotation.VisibleForTesting
 import androidx.room.Room
 import kotlinx.coroutines.*
@@ -28,8 +29,6 @@ object RootRepository {
         .build()
 
 
-
-
     /**
      * Получение данных о всех домах из сети
      * @param result - колбек содержащий в себе список данных о домах
@@ -48,7 +47,6 @@ object RootRepository {
                     } else {
                         houses.addAll(data)
                     }
-
                 }
                 count++
             }
@@ -62,21 +60,28 @@ object RootRepository {
      * @param result - колбек содержащий в себе список данных о домах
      */
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-    fun getNeedHouses(vararg houseNames: String, result: (houses: List<HouseRes>) -> Unit) {
+    private fun getNeedHouses(
+        vararg houseNames: String,
+        result: (houses: List<HouseRes>) -> Unit
+    ) {
         val houses = ArrayList<HouseRes>()
+        val jobs = mutableListOf<Job>()
         scope.launch {
             houseNames.forEach {
-                val houseResponse = api.getHouse(it).await()
-                if (houseResponse.isSuccessful) {
-                    val data = houseResponse.body()
-                    if (!data.isNullOrEmpty()) {
-                        houses.addAll(data)
+                val job = scope.launch {
+                    val houseResponse = api.getHouse(it).await()
+                    if (houseResponse.isSuccessful) {
+                        val data = houseResponse.body()
+                        if (!data.isNullOrEmpty()) {
+                            houses.addAll(data)
+                        }
                     }
                 }
+                jobs += job
             }
+            jobs.joinAll()
             result.invoke(houses)
         }
-
     }
 
     /**
@@ -88,30 +93,40 @@ object RootRepository {
     fun getNeedHouseWithCharacters(
         vararg houseNames: String,
         result: (houses: List<Pair<HouseRes, List<CharacterRes>>>) -> Unit
+
     ) {
-        val housesWithCharacter = ArrayList<Pair<HouseRes, List<CharacterRes>>>()
+        val housesWithCharacters = ArrayList<Pair<HouseRes, List<CharacterRes>>>()
         getNeedHouses(*houseNames) {
+            val houseJobs = mutableListOf<Job>()
             scope.launch {
                 for (house in it) {
                     val characters = ArrayList<CharacterRes>()
-                    for (characterURL in house.swornMembers) {
-                        val characterResponse =
-                            api.getCharacter(characterURL).await()
-                        if (characterResponse.isSuccessful) {
-                            val data = characterResponse.body()
-                            if (data != null) {
-                                characters.add(data)
+                    val houseJob = scope.launch {
+                        fun getCharacterAsync(characterURL: String) = scope.launch {
+                            val characterResponse = api.getCharacter(characterURL).await()
+                            if (characterResponse.isSuccessful) {
+                                val data = characterResponse.body()
+                                if (data != null) {
+                                    characters.add(data)
+                                }
                             }
                         }
-
+                        val characterJobs = mutableListOf<Job>()
+                        for (characterURL in house.swornMembers) {
+                            characterJobs += getCharacterAsync(characterURL)
+                        }
+                        characterJobs.joinAll()
+                        housesWithCharacters.add(Pair(house, characters))
                     }
-                    housesWithCharacter.add(Pair(house, characters))
+                    houseJobs += houseJob
                 }
-                result.invoke(housesWithCharacter)
+                houseJobs.joinAll()
+                result.invoke(housesWithCharacters)
             }
 
         }
     }
+
 
     /**
      * Запись данных о домах в DB
@@ -138,10 +153,12 @@ object RootRepository {
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
     fun insertCharacters(characters: List<CharacterRes>, complete: () -> Unit) {
         GlobalScope.launch {
-            val c = characters.map { characterRes -> characterRes.toCharacter(
-                characterRes.url.split("/").last(),
-                characterRes.allegiances.first().split("/").last()
-            )}
+            val c = characters.map { characterRes ->
+                characterRes.toCharacter(
+                    characterRes.url.split("/").last(),
+                    characterRes.allegiances.first().split("/").last()
+                )
+            }
             db.gameOfThronesDAO().insertCharacters(c)
             complete.invoke()
         }
@@ -155,9 +172,12 @@ object RootRepository {
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
     fun dropDb(complete: () -> Unit) {
         GlobalScope.launch {
-            db.gameOfThronesDAO().deleteAllCharacters()
-            db.gameOfThronesDAO().deleteAllHouses()
-
+            val job = GlobalScope.launch {
+                db.gameOfThronesDAO().deleteAllCharacters()
+                db.gameOfThronesDAO().deleteAllHouses()
+            }
+            job.join()
+            complete.invoke()
         }
     }
 
@@ -189,7 +209,7 @@ object RootRepository {
      */
     fun isNeedUpdate(result: (isNeed: Boolean) -> Unit) {
         GlobalScope.launch {
-            with(db.gameOfThronesDAO()){
+            with(db.gameOfThronesDAO()) {
                 val isNeeded = getCountOfHouses() == 0 && getCountOfCharacters() == 0
                 result.invoke(isNeeded)
             }

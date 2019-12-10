@@ -198,7 +198,12 @@ object RootRepository {
      */
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
     fun findCharactersByHouseName(name: String, result: (characters: List<CharacterItem>) -> Unit) {
-        //TODO implement me
+        GlobalScope.launch {
+            GlobalScope.launch {
+                val characters = db.gameOfThronesDAO().getCharactersByHouseName(name)
+                result.invoke(characters)
+            }
+        }
     }
 
     /**

@@ -50,7 +50,7 @@ class HouseFragment : Fragment() {
 
     private fun initViews() {
         val simpleItemDecorator = SimpleItemDecorator(context!!)
-        charactersAdapter = CharactersAdapter()
+        charactersAdapter = CharactersAdapter(){}
         with(rv_characters) {
             adapter = charactersAdapter
             layoutManager = androidx.recyclerview.widget.LinearLayoutManager(context)

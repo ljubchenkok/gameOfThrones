@@ -3,6 +3,7 @@ package ru.skillbranch.gameofthrones.ui
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.android.synthetic.main.character_item.view.*
@@ -10,7 +11,7 @@ import ru.skillbranch.gameofthrones.AppConfig
 import ru.skillbranch.gameofthrones.R
 import ru.skillbranch.gameofthrones.data.local.entities.CharacterItem
 
-class CharactersAdapter  :
+class CharactersAdapter(private val listener: (CharacterItem) -> Unit) :
     RecyclerView.Adapter<CharactersAdapter.ViewHolder>() {
 
     var items: List<CharacterItem> = listOf()
@@ -63,14 +64,23 @@ class CharactersAdapter  :
     inner class ViewHolder internal constructor(val view: View) :
         RecyclerView.ViewHolder(view) {
         fun bind(characterItem: CharacterItem) {
+            val noInfoString = view.context.resources.getString(R.string.info_is_not_available)
             with(view) {
-                tv_character_name.text = characterItem.name
-                tv_character_titles.text = characterItem.titles.joinToString(separator = "•")
+                tv_character_name.text =
+                    if (characterItem.name.isEmpty()) noInfoString else characterItem.name
+                tv_character_titles.text =
+                    if (characterItem.titles.none { it.isNotBlank() })
+                        noInfoString
+                    else characterItem.titles.joinToString(separator = "•")
                 iv_character_icon.setImageResource(
                     AppConfig.getIconByHouseName(characterItem.house)
                 )
+                setOnClickListener {
+                    listener.invoke(characterItem)
+                }
             }
 
         }
+
     }
 }

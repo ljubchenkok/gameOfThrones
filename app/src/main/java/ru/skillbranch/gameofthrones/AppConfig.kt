@@ -41,7 +41,6 @@ object AppConfig {
     }
 
     fun getIconByHouseName(name: String): Int {
-        val context = App.applicationContext()
         return when (name) {
             "Stark" -> R.drawable.stark_icon
             "Lannister" -> R.drawable.lannister_icon

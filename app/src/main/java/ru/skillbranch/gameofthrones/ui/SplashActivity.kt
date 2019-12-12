@@ -19,7 +19,7 @@ import ru.skillbranch.gameofthrones.repositories.RootRepository
 class SplashActivity : AppCompatActivity() {
 
     companion object {
-        const val DELAY = 100L
+        const val DELAY = 5000L
     }
 
     private var isHousesReady = false

@@ -7,4 +7,10 @@
     <dimen name="appbar_padding_top">8dp</dimen>
     <dimen name="spacing_normal_16">16dp</dimen>
     <dimen name="divider_margin">92dp</dimen>
+    <dimen name="app_bar_height">180dp</dimen>
+    <dimen name="text_margin">16dp</dimen>
+    <dimen name="character_detail_title_size">16sp</dimen>
+    <dimen name="character_detail_icon_size">40dp</dimen>
+    <dimen name="character_detail_title_width">70dp</dimen>
+    <dimen name="spacing_tiny_8">8dp</dimen>
 </resources>

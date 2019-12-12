@@ -19,8 +19,6 @@ interface GameOfThronesApi {
     fun getAllHouses(@Query("page") page: Int, @Query("pageSize") pageSize: Int): Deferred<Response<List<HouseRes>>>
     @GET("/api/houses")
     fun getHouse(@Query("name") name: String): Deferred<Response<List<HouseRes>>>
-//    @GET("/api/characters/{id}")
-//    fun getCharacter(@Path(value="id") id:String): Deferred<Response<CharacterRes>>
     @GET
     fun getCharacter(@Url url:String): Deferred<Response<CharacterRes>>
 

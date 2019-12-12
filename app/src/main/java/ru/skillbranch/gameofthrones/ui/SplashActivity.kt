@@ -1,4 +1,4 @@
-package ru.skillbranch.gameofthrones
+package ru.skillbranch.gameofthrones.ui
 
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
@@ -8,16 +8,19 @@ import android.graphics.PorterDuff
 import android.net.ConnectivityManager
 import android.os.Bundle
 import android.os.Handler
-import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.activity_main.*
+import ru.skillbranch.gameofthrones.AppConfig
+import ru.skillbranch.gameofthrones.R
 import ru.skillbranch.gameofthrones.repositories.RootRepository
-import ru.skillbranch.gameofthrones.ui.CharactersListScreen
 
 
 class SplashActivity : AppCompatActivity() {
 
+    companion object {
+        const val DELAY = 100L
+    }
 
     private var isHousesReady = false
     private var isCharactersReady = false
@@ -27,11 +30,7 @@ class SplashActivity : AppCompatActivity() {
         setTheme(R.style.SplashTheme)
         setContentView(R.layout.activity_main)
         startAnimateImageView()
-//        RootRepository.dropDb {
-//            Log.d("DB", "Droped!!")
-//            getData()
-//
-//        }
+//        RootRepository.dropDb { getData() }
         getData()
         checkDataIsReady()
         return
@@ -48,10 +47,10 @@ class SplashActivity : AppCompatActivity() {
 
     private fun checkDataIsReady() {
         val r = Runnable {
-            if(isHousesReady && isCharactersReady) showCharactersListScreen()
+            if (isHousesReady && isCharactersReady) showCharactersListScreen()
             else checkDataIsReady()
         }
-        Handler().postDelayed(r, 100)
+        Handler().postDelayed(r, DELAY)
 
 
     }
@@ -61,13 +60,19 @@ class SplashActivity : AppCompatActivity() {
             if (isNeeded) {
                 if (!isOnline()) {
                     stopAnimateImageView()
-                    Snackbar.make(ll_splash, R.string.no_internet, Snackbar.LENGTH_INDEFINITE)
+                    Snackbar.make(
+                        ll_splash,
+                        R.string.no_internet, Snackbar.LENGTH_INDEFINITE
+                    )
                         .show();
                     return@isNeedUpdate
                 }
-                RootRepository.getNeedHouseWithCharacters(*AppConfig.NEED_HOUSES
+                RootRepository.getNeedHouseWithCharacters(
+                    *AppConfig.NEED_HOUSES
                 ) {
-                    RootRepository.insertHouses(it.map { pair -> pair.first }) { isHousesReady = true }
+                    RootRepository.insertHouses(it.map { pair -> pair.first }) {
+                        isHousesReady = true
+                    }
                     for (pair in it) {
                         RootRepository.insertCharacters(pair.second) { isCharactersReady = true }
                     }
@@ -94,7 +99,7 @@ class SplashActivity : AppCompatActivity() {
     }
 
     fun startAnimateImageView() {
-        val red =  Color.RED
+        val red = Color.RED
         colorAnim.addUpdateListener { animation ->
             val mul = animation.animatedValue as Float
             val alphaRed = adjustAlpha(red, mul)

@@ -22,11 +22,15 @@ data class CharacterRes(
     val tvSeries: List<String> = listOf(),
     val playedBy: List<String> = listOf()
 
+
 ){
-    fun toCharacter(id: String, houseId: String, motherId: String, fatherId: String, spouseId: String): Character{
+    var houseId: String = "Stark"
+
+
+    fun toCharacter(id: String, motherId: String, fatherId: String, spouseId: String): Character{
         return Character(
             id = id,
-            houseId = houseId,
+            houseId = this.houseId,
             mother = motherId,
             father = fatherId,
             spouse = spouseId,

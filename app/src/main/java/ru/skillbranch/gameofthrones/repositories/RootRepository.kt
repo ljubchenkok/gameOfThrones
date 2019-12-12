@@ -4,8 +4,10 @@ import androidx.annotation.VisibleForTesting
 import androidx.room.Room
 import kotlinx.coroutines.*
 import ru.skillbranch.gameofthrones.App.Companion.applicationContext
+import ru.skillbranch.gameofthrones.R
 import ru.skillbranch.gameofthrones.data.local.entities.CharacterFull
 import ru.skillbranch.gameofthrones.data.local.entities.CharacterItem
+import ru.skillbranch.gameofthrones.data.local.entities.House
 import ru.skillbranch.gameofthrones.data.remote.res.CharacterRes
 import ru.skillbranch.gameofthrones.data.remote.res.HouseRes
 import kotlin.coroutines.CoroutineContext
@@ -59,7 +61,7 @@ object RootRepository {
      * @param result - колбек содержащий в себе список данных о домах
      */
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-    private fun getNeedHouses(
+    fun getNeedHouses(
         vararg houseNames: String,
         result: (houses: List<HouseRes>) -> Unit
     ) {
@@ -83,6 +85,18 @@ object RootRepository {
         }
     }
 
+    suspend fun getCharacter(characterURL: String): CharacterRes? {
+        val characterResponse = api.getCharacter(characterURL).await()
+        if (characterResponse.isSuccessful) {
+            val data = characterResponse.body()
+            if (data != null) {
+                return data
+            }
+            return null
+        }
+        return null
+    }
+
     /**
      * Получение данных о требуемых домах по их полным именам и персонажах в каждом из домов из сети
      * @param houseNames - массив полных названий домов (смотри AppConfig)
@@ -96,30 +110,19 @@ object RootRepository {
     ) {
         val housesWithCharacters = ArrayList<Pair<HouseRes, List<CharacterRes>>>()
         getNeedHouses(*houseNames) {
-            val houseJobs = mutableListOf<Job>()
             scope.launch {
                 for (house in it) {
                     val characters = ArrayList<CharacterRes>()
-                    val houseJob = scope.launch {
-                        fun getCharacterAsync(characterURL: String) = scope.launch {
-                            val characterResponse = api.getCharacter(characterURL).await()
-                            if (characterResponse.isSuccessful) {
-                                val data = characterResponse.body()
-                                if (data != null) {
-                                    characters.add(data)
-                                }
+                    for (characterURL in house.swornMembers) {
+                        api.getCharacter(characterURL).await().body()
+                            ?.let {
+                                it.houseId = getHouseShortName(house.name)
+                                characters.add(it)
                             }
-                        }
-                        val characterJobs = mutableListOf<Job>()
-                        for (characterURL in house.swornMembers) {
-                            characterJobs += getCharacterAsync(characterURL)
-                        }
-                        characterJobs.joinAll()
-                        housesWithCharacters.add(Pair(house, characters))
                     }
-                    houseJobs += houseJob
+                    housesWithCharacters.add(Pair(house, characters))
+
                 }
-                houseJobs.joinAll()
                 result.invoke(housesWithCharacters)
             }
 
@@ -135,18 +138,26 @@ object RootRepository {
      */
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
     fun insertHouses(housesRes: List<HouseRes>, complete: () -> Unit) {
-        val houses = housesRes.map { houseRes -> houseRes.toHouse(
-            id = houseRes.url.split("/").last(),
-            shortName = houseRes.name.split(" ")[1],
-            currentLordId = houseRes.currentLord.split("/").last(),
-            founderId = houseRes.founder.split("/").last(),
-            heirId = houseRes.heir.split("/").last()
-        )}
+        val houses = housesRes.map { houseRes ->
+            houseRes.toHouse(
+                id = houseRes.url.split("/").last(),
+                shortName = getHouseShortName(houseRes.name),
+                currentLordId = houseRes.currentLord.split("/").last(),
+                founderId = houseRes.founder.split("/").last(),
+                heirId = houseRes.heir.split("/").last()
+            )
+        }
         GlobalScope.launch {
             db.gameOfThronesDAO().insertHouses(houses)
             complete.invoke()
         }
 
+    }
+
+    private fun getHouseShortName(name: String): String {
+        val split = name.split(" ")
+        val index = split.indexOf("of")
+        return split[index - 1]
     }
 
     /**
@@ -161,7 +172,6 @@ object RootRepository {
             val characters = charactersRes.map { characterRes ->
                 characterRes.toCharacter(
                     id = characterRes.url.split("/").last(),
-                    houseId = characterRes.allegiances.first().split("/").last(),
                     motherId = characterRes.mother.split("/").last(),
                     fatherId = characterRes.father.split("/").last(),
                     spouseId = characterRes.spouse.split("/").last()
@@ -199,10 +209,8 @@ object RootRepository {
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
     fun findCharactersByHouseName(name: String, result: (characters: List<CharacterItem>) -> Unit) {
         GlobalScope.launch {
-            GlobalScope.launch {
-                val characters = db.gameOfThronesDAO().getCharactersByHouseName(name)
-                result.invoke(characters)
-            }
+            val characters = db.gameOfThronesDAO().getCharactersByHouseName(name)
+            result.invoke(characters)
         }
     }
 
@@ -214,7 +222,34 @@ object RootRepository {
      */
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
     fun findCharacterFullById(id: String, result: (character: CharacterFull) -> Unit) {
-        //TODO implement me
+        GlobalScope.launch {
+            val character = db.gameOfThronesDAO().getCharacterById(id)
+            val house = db.gameOfThronesDAO().getHouseByCharacterId(id)
+            val father =
+                if (character.father.isNotEmpty()) db.gameOfThronesDAO().getRelativeCharactersById(
+                    character.father
+                ) else null
+            val mother =
+                if (character.mother.isNotEmpty()) db.gameOfThronesDAO().getRelativeCharactersById(
+                    character.mother
+                ) else null
+            val noInfoString =
+                applicationContext().resources.getString(R.string.info_is_not_available)
+            val characterFull = CharacterFull(
+                id = character.id,
+                titles = character.titles,
+                name = if (character.name.isEmpty()) noInfoString else character.name,
+                died = character.died,
+                born = character.born,
+                aliases = character.aliases,
+                house = house.name,
+                words = house.words,
+                mother = mother,
+                father = father
+            )
+            result.invoke(characterFull)
+
+        }
     }
 
     /**
@@ -227,6 +262,13 @@ object RootRepository {
                 val isNeeded = getCountOfHouses() == 0 && getCountOfCharacters() == 0
                 result.invoke(isNeeded)
             }
+        }
+    }
+
+    fun getHouses(result: (houses: List<House>) -> Unit) {
+        GlobalScope.launch {
+            val houses = db.gameOfThronesDAO().getAllHouses()
+            result.invoke(houses)
         }
     }
 

@@ -1,4 +1,4 @@
-package ru.skillbranch.gameofthrones.ui
+package ru.skillbranch.gameofthrones.ui.custom
 
 import android.content.Context
 import android.graphics.Canvas
@@ -8,8 +8,6 @@ import androidx.recyclerview.widget.RecyclerView
 import ru.skillbranch.gameofthrones.R
 
 class SimpleItemDecorator(context: Context) : RecyclerView.ItemDecoration() {
-
-    var swipingItemNumber = -1
 
     private val divider: Drawable = context.resources.getDrawable(R.drawable.divider, context.theme)
 
@@ -22,7 +20,6 @@ class SimpleItemDecorator(context: Context) : RecyclerView.ItemDecoration() {
             val child = parent.getChildAt(i)
             val bounds = Rect()
             parent.getDecoratedBoundsWithMargins(child, bounds)
-            val adapterPosition = parent.getChildAdapterPosition(child)
             val left =  parent.paddingLeft + margin
             val params = child.layoutParams as RecyclerView.LayoutParams
             val top = child.bottom + params.bottomMargin

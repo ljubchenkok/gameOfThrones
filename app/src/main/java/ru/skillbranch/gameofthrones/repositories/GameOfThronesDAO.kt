@@ -4,6 +4,7 @@ import androidx.room.*
 import ru.skillbranch.gameofthrones.data.local.entities.Character
 import ru.skillbranch.gameofthrones.data.local.entities.CharacterItem
 import ru.skillbranch.gameofthrones.data.local.entities.House
+import ru.skillbranch.gameofthrones.data.local.entities.RelativeCharacter
 
 @Dao
 interface GameOfThronesDAO {
@@ -14,13 +15,22 @@ interface GameOfThronesDAO {
     fun insertCharacters(vararg: List<Character>)
 
     @Query("SELECT * FROM HOUSES")
-    fun getAllHouses(): Array<House>
+    fun getAllHouses(): List<House>
 
     @Query("SELECT * FROM HOUSES WHERE name = :name")
     fun getHouse(name: String): House
 
-    @Query("select c.id, c.name, c.titles, c.aliases, h.name as house from  characters c left join houses h on c.houseId = h.id where h.name = :houseName")
+    @Query("SELECT * FROM CHARACTERS WHERE id = :id")
+    fun getCharacterById(id: String): Character
+
+    @Query("SELECT h.* FROM HOUSES h left join characters c on c.houseId = h.name  WHERE c.id = :id")
+    fun getHouseByCharacterId(id: String): House
+
+    @Query("select c.id, c.name, c.titles, c.aliases, c.houseId as house from  characters c where c.houseId = :houseName order by c.name")
     fun getCharactersByHouseName(houseName: String): List<CharacterItem>
+
+    @Query("select c.id, c.name, c.houseId as house from  characters c where c.id = :id")
+    fun getRelativeCharactersById(id: String): RelativeCharacter
 
     @Query("SELECT count(id) FROM HOUSES")
     fun getCountOfHouses(): Int
@@ -33,6 +43,8 @@ interface GameOfThronesDAO {
 
     @Query("DELETE FROM characters")
     fun deleteAllCharacters()
+
+
 
 
 }
